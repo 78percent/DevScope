@@ -1,0 +1,23 @@
+node_modules/
+.pnpm-store/
+.turbo/
+coverage/
+dist/
+.next/
+*.tsbuildinfo
+
+# Local editor metadata is not part of the deliverable.
+.idea/
+.jbeval/
+.vscode/
+
+# Secrets must never enter version control.
+.env
+.env.local
+.env.*.local
+
+# Local reports can contain generated or temporary content.
+reports/*.tmp
+
+# Project documents and private work logs stay local and are never uploaded.
+*.md

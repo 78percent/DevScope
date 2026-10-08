@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: devscope-postgres
+    environment:
+      POSTGRES_DB: devscope
+      POSTGRES_USER: devscope
+      POSTGRES_PASSWORD: devscope
+    ports:
+      - "5432:5432"
+    volumes:
+      - devscope_postgres_data:/var/lib/postgresql/data
+      - ./packages/db/drizzle/0000_day1.sql:/docker-entrypoint-initdb.d/0000_day1.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devscope -d devscope"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  devscope_postgres_data:

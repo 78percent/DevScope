@@ -1,0 +1,14 @@
+{
+  "name": "@devscope/db",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "migrate": "drizzle-kit migrate",
+    "generate": "drizzle-kit generate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "@devscope/shared": "workspace:*", "drizzle-orm": "^0.44.7", "postgres": "^3.4.8" },
+  "devDependencies": { "drizzle-kit": "^0.31.8" }
+}
