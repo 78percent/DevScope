@@ -7,7 +7,8 @@ services:
       POSTGRES_USER: devscope
       POSTGRES_PASSWORD: devscope
     ports:
-      - "5432:5432"
+      # Windows 已有 PostgreSQL 占用 5432，DevScope 固定使用 5433 避免冲突。
+      - "5433:5432"
     volumes:
       - devscope_postgres_data:/var/lib/postgresql/data
       - ./packages/db/drizzle/0000_day1.sql:/docker-entrypoint-initdb.d/0000_day1.sql:ro

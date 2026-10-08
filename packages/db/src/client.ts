@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema.js";
 
-export function createDatabase(databaseUrl = process.env.DATABASE_URL ?? "postgresql://devscope:devscope@localhost:5432/devscope") {
+export function createDatabase(databaseUrl = process.env.DATABASE_URL ?? "postgresql://devscope:devscope@localhost:5433/devscope") {
   const client = postgres(databaseUrl, { max: 5 });
   return { client, db: drizzle(client, { schema }) };
 }
