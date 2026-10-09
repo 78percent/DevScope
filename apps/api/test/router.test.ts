@@ -33,3 +33,22 @@ describe("analysis.analyzeRepository", () => {
     await expect(appRouter.createCaller({ analyzer }).analysis.analyzeRepository(input)).rejects.toThrow();
   });
 });
+
+describe("rag routes", () => {
+  it("validates and delegates ingestion and search", async () => {
+    const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
+    const rag = {
+      ingestRepository: vi.fn().mockResolvedValue({ repository: "acme/demo", chunks_stored: 2, sources: { repository: 1, readme: 1, hacker_news: 0 } }),
+      search: vi.fn().mockResolvedValue({ answer: "answer", sources: [] }),
+    };
+    const caller = appRouter.createCaller({ analyzer, rag });
+    await expect(caller.rag.ingestRepository({ owner: "acme", name: "demo" })).resolves.toMatchObject({ chunks_stored: 2 });
+    await expect(caller.rag.search({ query: "What does it do?" })).resolves.toEqual({ answer: "answer", sources: [] });
+    expect(rag.search).toHaveBeenCalledWith({ query: "What does it do?", limit: 5 });
+  });
+
+  it("reports a missing RAG service clearly", async () => {
+    const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
+    await expect(appRouter.createCaller({ analyzer }).rag.search({ query: "What does it do?" })).rejects.toThrow("not configured");
+  });
+});

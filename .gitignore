@@ -4,6 +4,7 @@ node_modules/
 coverage/
 dist/
 .next/
+.next-dev/
 *.tsbuildinfo
 
 # Local editor metadata is not part of the deliverable.

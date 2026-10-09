@@ -5,10 +5,10 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "scripts": {
-    "migrate": "drizzle-kit migrate",
+    "migrate": "tsx src/migrate.ts",
     "generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": { "@devscope/shared": "workspace:*", "drizzle-orm": "^0.44.7", "postgres": "^3.4.8" },
-  "devDependencies": { "drizzle-kit": "^0.31.8" }
+  "devDependencies": { "drizzle-kit": "^0.31.8", "tsx": "^4.21.0" }
 }

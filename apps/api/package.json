@@ -14,8 +14,10 @@
   },
   "dependencies": {
     "@devscope/ai": "workspace:*",
+    "@devscope/core": "workspace:*",
     "@devscope/db": "workspace:*",
     "@devscope/shared": "workspace:*",
+    "@devscope/sources": "workspace:*",
     "@fastify/cors": "^11.1.0",
     "@trpc/server": "^11.7.1",
     "dotenv": "^17.2.3",
