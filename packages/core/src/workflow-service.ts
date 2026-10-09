@@ -2,6 +2,9 @@ import type { RepositoryAnalyzer } from "@devscope/ai";
 import type { WorkflowStore } from "@devscope/db";
 import {
   QuickAssessmentReportSchema,
+  HealthTrendResultSchema,
+  type HealthTrendInput,
+  type HealthTrendResult,
   type CompetitorRepository,
   type RepositoryAnalysis,
   type RepositoryAnalysisInput,
@@ -42,6 +45,7 @@ export interface WorkflowService {
   getRun(runId: number): Promise<WorkflowRun | null>;
   listRuns(limit: number): Promise<WorkflowRun[]>;
   ensureWatchlist(targets: RepositoryTarget[]): Promise<void>;
+  getHealthTrends(input: HealthTrendInput): Promise<HealthTrendResult>;
 }
 
 type DailyItem = { repository: string; snapshot: RepositorySnapshot; analysis: RepositoryAnalysis };
@@ -84,6 +88,12 @@ export class DefaultWorkflowService implements WorkflowService {
 
   public ensureWatchlist(targets: RepositoryTarget[]): Promise<void> {
     return this.store.ensureWatchlist(targets);
+  }
+
+  public async getHealthTrends(input: HealthTrendInput): Promise<HealthTrendResult> {
+    return HealthTrendResultSchema.parse({
+      points: await this.store.getHealthTrends(input.days, input.repositories),
+    });
   }
 
   private async executeDaily(runId: number): Promise<void> {

@@ -38,6 +38,7 @@ class MemoryWorkflowStore implements WorkflowStore {
   public async getLatestSnapshot(target: RepositoryTarget) { return this.snapshots.get(format(target)) ?? null; }
   public async saveSnapshot(target: RepositoryTarget, snapshot: RepositorySnapshot) { this.snapshots.set(format(target), snapshot); }
   public async getRecentCompletedRuns(type: WorkflowType, since: Date) { return [...this.runs.values()].filter((run) => run.type === type && run.status === "completed" && new Date(run.completed_at ?? 0) >= since); }
+  public async getHealthTrends() { return [{ repository: "acme/demo", date: "2026-01-01T00:00:00.000Z", health_score: 84 }]; }
 
   private patchRun(id: number, patch: Partial<WorkflowRun>) {
     const run = this.runs.get(id);
@@ -105,6 +106,11 @@ describe("DefaultWorkflowService", () => {
   it("rejects an invalid GitHub reference before creating a run", async () => {
     const { service } = setup();
     await expect(service.startQuickAssessment("not-a-repository")).rejects.toThrow("owner/repo");
+  });
+
+  it("returns persisted health trend points", async () => {
+    const { service } = setup();
+    await expect(service.getHealthTrends({ days: 30 })).resolves.toEqual({ points: [{ repository: "acme/demo", date: "2026-01-01T00:00:00.000Z", health_score: 84 }] });
   });
 
   it("keeps a daily report when one repository fails", async () => {

@@ -22,3 +22,5 @@ reports/*.tmp
 
 # Project documents and private work logs stay local and are never uploaded.
 *.md
+!CLAUDE.md
+!skills/**/SKILL.md

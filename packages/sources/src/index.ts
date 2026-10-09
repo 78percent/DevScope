@@ -3,3 +3,4 @@ export * from "./github-source.js";
 export * from "./hacker-news-source.js";
 export * from "./collector.js";
 export * from "./workflow-source.js";
+export * from "./cli-source.js";

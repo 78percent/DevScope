@@ -64,6 +64,7 @@ describe("workflow routes", () => {
       getRun: vi.fn().mockResolvedValue(null),
       listRuns: vi.fn().mockResolvedValue([]),
       ensureWatchlist: vi.fn().mockResolvedValue(undefined),
+      getHealthTrends: vi.fn().mockResolvedValue({ points: [] }),
     };
     const caller = appRouter.createCaller({ analyzer, workflow });
     await expect(caller.workflow.startQuick({ repository: "acme/demo" })).resolves.toEqual({ run_id: 42 });
@@ -71,6 +72,7 @@ describe("workflow routes", () => {
     await expect(caller.workflow.startWeekly()).resolves.toEqual({ run_id: 3 });
     await expect(caller.workflow.status({ run_id: 42 })).resolves.toBeNull();
     await expect(caller.workflow.list({})).resolves.toEqual([]);
+    await expect(caller.workflow.healthTrends({})).resolves.toEqual({ points: [] });
     expect(workflow.startQuickAssessment).toHaveBeenCalledWith("acme/demo");
   });
 

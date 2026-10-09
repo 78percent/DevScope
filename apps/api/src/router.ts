@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 import type { RagService, WorkflowService } from "@devscope/core";
-import { IngestRepositoryInputSchema, IngestRepositoryResultSchema, QuickAssessmentInputSchema, RepositoryAnalysisInputSchema, RepositoryAnalysisSchema, SemanticSearchInputSchema, SemanticSearchResultSchema, WorkflowListInputSchema, WorkflowRunInputSchema, WorkflowRunSchema, WorkflowStartResultSchema } from "@devscope/shared";
+import { HealthTrendInputSchema, HealthTrendResultSchema, IngestRepositoryInputSchema, IngestRepositoryResultSchema, QuickAssessmentInputSchema, RepositoryAnalysisInputSchema, RepositoryAnalysisSchema, SemanticSearchInputSchema, SemanticSearchResultSchema, WorkflowListInputSchema, WorkflowRunInputSchema, WorkflowRunSchema, WorkflowStartResultSchema } from "@devscope/shared";
 import type { ApiContext } from "./context.js";
 
 const t = initTRPC.context<ApiContext>().create();
@@ -34,6 +34,8 @@ export const appRouter = t.router({
       .query(({ ctx, input }) => requireWorkflow(ctx).getRun(input.run_id)),
     list: t.procedure.input(WorkflowListInputSchema).output(WorkflowRunSchema.array())
       .query(({ ctx, input }) => requireWorkflow(ctx).listRuns(input.limit)),
+    healthTrends: t.procedure.input(HealthTrendInputSchema).output(HealthTrendResultSchema)
+      .query(({ ctx, input }) => requireWorkflow(ctx).getHealthTrends(input)),
   }),
 });
 

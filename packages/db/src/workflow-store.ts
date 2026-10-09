@@ -1,5 +1,6 @@
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, asc, desc, eq, gte } from "drizzle-orm";
 import type {
+  HealthTrendPoint,
   RepositoryAnalysis,
   RepositorySnapshot,
   RepositoryTarget,
@@ -34,6 +35,7 @@ export interface WorkflowStore {
   getLatestSnapshot(target: RepositoryTarget): Promise<RepositorySnapshot | null>;
   saveSnapshot(target: RepositoryTarget, snapshot: RepositorySnapshot, analysis?: RepositoryAnalysis): Promise<void>;
   getRecentCompletedRuns(type: WorkflowType, since: Date): Promise<WorkflowRun[]>;
+  getHealthTrends(days: number, repositoryNames?: string[]): Promise<HealthTrendPoint[]>;
 }
 
 export class PostgresWorkflowStore implements WorkflowStore {
@@ -149,5 +151,24 @@ export class PostgresWorkflowStore implements WorkflowStore {
       .where(and(eq(workflowRuns.type, type), eq(workflowRuns.status, "completed"), gte(workflowRuns.completedAt, since)))
       .orderBy(desc(workflowRuns.id));
     return (await Promise.all(rows.map((row) => this.getRun(row.id)))).filter((run): run is WorkflowRun => run !== null);
+  }
+
+  public async getHealthTrends(days: number, repositoryNames?: string[]): Promise<HealthTrendPoint[]> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1_000);
+    const rows = await this.db.select({
+      owner: repositories.owner,
+      name: repositories.name,
+      healthScore: repositoryAnalyses.healthScore,
+      createdAt: repositoryAnalyses.createdAt,
+    }).from(repositoryAnalyses)
+      .innerJoin(repositories, eq(repositoryAnalyses.repositoryId, repositories.id))
+      .where(gte(repositoryAnalyses.createdAt, since))
+      .orderBy(asc(repositoryAnalyses.createdAt));
+    const selected = repositoryNames ? new Set(repositoryNames.map((name) => name.toLowerCase())) : null;
+    return rows.flatMap((row) => {
+      const repository = `${row.owner}/${row.name}`;
+      if (selected && !selected.has(repository.toLowerCase())) return [];
+      return [{ repository, date: row.createdAt.toISOString(), health_score: row.healthScore }];
+    });
   }
 }
