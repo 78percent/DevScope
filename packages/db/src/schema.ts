@@ -1,5 +1,5 @@
 import { index, boolean, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, vector } from "drizzle-orm/pg-core";
-import type { RagSourceType, RepositoryAnalysis } from "@devscope/shared";
+import type { RagSourceType, RepositoryAnalysis, RepositorySnapshot, WorkflowStatus, WorkflowStepStatus, WorkflowType } from "@devscope/shared";
 
 export const repositories = pgTable("repositories", {
   id: serial("id").primaryKey(),
@@ -31,3 +31,41 @@ export const repoEmbeddings = pgTable("repo_embeddings", {
   embedding: vector("embedding", { dimensions: 1024 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("repo_embeddings_embedding_hnsw").using("hnsw", table.embedding.op("vector_cosine_ops"))]);
+
+export const watchlist = pgTable("watchlist", {
+  id: serial("id").primaryKey(),
+  repositoryId: integer("repository_id").notNull().references(() => repositories.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("watchlist_repository_unique").on(table.repositoryId)]);
+
+export const repositorySnapshots = pgTable("repository_snapshots", {
+  id: serial("id").primaryKey(),
+  repositoryId: integer("repository_id").notNull().references(() => repositories.id, { onDelete: "cascade" }),
+  snapshot: jsonb("snapshot").$type<RepositorySnapshot>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("repository_snapshots_repository_created_idx").on(table.repositoryId, table.createdAt)]);
+
+export const workflowRuns = pgTable("workflow_runs", {
+  id: serial("id").primaryKey(),
+  type: text("type").$type<WorkflowType>().notNull(),
+  status: text("status").$type<WorkflowStatus>().notNull().default("pending"),
+  input: jsonb("input").$type<unknown>().notNull(),
+  output: jsonb("output").$type<unknown>(),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const workflowSteps = pgTable("workflow_steps", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id").notNull().references(() => workflowRuns.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  label: text("label").notNull(),
+  status: text("status").$type<WorkflowStepStatus>().notNull().default("pending"),
+  attempt: integer("attempt").notNull().default(0),
+  output: jsonb("output").$type<unknown>(),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("workflow_steps_run_key_unique").on(table.runId, table.key)]);

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { RepositoryAnalyzer } from "@devscope/ai";
+import type { WorkflowService } from "@devscope/core";
 import { appRouter } from "../src/router.js";
 
 const input = {
@@ -50,5 +51,31 @@ describe("rag routes", () => {
   it("reports a missing RAG service clearly", async () => {
     const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
     await expect(appRouter.createCaller({ analyzer }).rag.search({ query: "What does it do?" })).rejects.toThrow("not configured");
+  });
+});
+
+describe("workflow routes", () => {
+  it("starts a quick assessment and returns its run id", async () => {
+    const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
+    const workflow: WorkflowService = {
+      startDailyHealth: vi.fn().mockResolvedValue(1),
+      startQuickAssessment: vi.fn().mockResolvedValue(42),
+      startWeeklyReport: vi.fn().mockResolvedValue(3),
+      getRun: vi.fn().mockResolvedValue(null),
+      listRuns: vi.fn().mockResolvedValue([]),
+      ensureWatchlist: vi.fn().mockResolvedValue(undefined),
+    };
+    const caller = appRouter.createCaller({ analyzer, workflow });
+    await expect(caller.workflow.startQuick({ repository: "acme/demo" })).resolves.toEqual({ run_id: 42 });
+    await expect(caller.workflow.startDaily()).resolves.toEqual({ run_id: 1 });
+    await expect(caller.workflow.startWeekly()).resolves.toEqual({ run_id: 3 });
+    await expect(caller.workflow.status({ run_id: 42 })).resolves.toBeNull();
+    await expect(caller.workflow.list({})).resolves.toEqual([]);
+    expect(workflow.startQuickAssessment).toHaveBeenCalledWith("acme/demo");
+  });
+
+  it("reports a missing workflow service clearly", async () => {
+    const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
+    await expect(appRouter.createCaller({ analyzer }).workflow.startDaily()).rejects.toThrow("not configured");
   });
 });

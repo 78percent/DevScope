@@ -23,7 +23,10 @@ describe("AnthropicRepositoryAnalyzer", () => {
   it("forces the named tool and validates its input", async () => {
     const client = clientWithContent([{ type: "tool_use", id: "tool-1", name: analysisToolName, input: output }]);
     await expect(new AnthropicRepositoryAnalyzer(client, "deepseek-flash").analyze(input)).resolves.toEqual(output);
-    expect(client.messages.create).toHaveBeenCalledWith(expect.objectContaining({ tool_choice: { type: "tool", name: analysisToolName } }));
+    expect(client.messages.create).toHaveBeenCalledWith(expect.objectContaining({
+      thinking: { type: "disabled" },
+      tool_choice: { type: "tool", name: analysisToolName },
+    }));
   });
 
   it("rejects a response without the required tool", async () => {

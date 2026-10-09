@@ -2,7 +2,6 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { analysisToolName, parseRepositoryAnalysis, type RepositoryAnalysis, type RepositoryAnalysisInput, RepositoryAnalysisSchema } from "@devscope/shared";
 import { z } from "zod";
 
-/** API 只依赖这个接口，因此测试和本地演示无需真正请求模型。 */
 export interface RepositoryAnalyzer {
   analyze(input: RepositoryAnalysisInput): Promise<RepositoryAnalysis>;
 }
@@ -16,6 +15,7 @@ export class AnthropicRepositoryAnalyzer implements RepositoryAnalyzer {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 1_200,
+      thinking: { type: "disabled" },
       system: "You are a repository health analyst. Use only the supplied evidence and always call the requested tool.",
       messages: [{ role: "user", content: `Analyze this GitHub repository snapshot:\n${JSON.stringify(input)}` }],
       tools: [{
@@ -23,19 +23,16 @@ export class AnthropicRepositoryAnalyzer implements RepositoryAnalyzer {
         description: "Return the validated repository health assessment.",
         input_schema: z.toJSONSchema(RepositoryAnalysisSchema) as { type: "object"; [key: string]: unknown },
       }],
-      // 指定工具名，而不是 auto；这就是“强制结构化输出”的关键。
       tool_choice: { type: "tool", name: analysisToolName },
     });
 
     const toolUse = response.content.find((block) => block.type === "tool_use" && block.name === analysisToolName);
     if (!toolUse || toolUse.type !== "tool_use") throw new Error(`AI response did not call ${analysisToolName}`);
 
-    // 工具调用只保证形状趋向正确，Zod 才是最终可信边界。
     return parseRepositoryAnalysis(toolUse.input);
   }
 }
 
-/** 固定结果的本地分析器让 Day 1 在没有 Key 时仍能完整演示 Web → API。 */
 export class MockRepositoryAnalyzer implements RepositoryAnalyzer {
   public async analyze(input: RepositoryAnalysisInput): Promise<RepositoryAnalysis> {
     const archived = input.repository.archived;
