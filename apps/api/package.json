@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@devscope/agent": "workspace:*",
     "@devscope/ai": "workspace:*",
     "@devscope/core": "workspace:*",
     "@devscope/db": "workspace:*",

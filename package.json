@@ -12,6 +12,8 @@
     "skill:fetch": "tsx skills/repo-fetch/src/cli.ts",
     "skill:analyze": "tsx skills/repo-analyze/src/cli.ts",
     "skill:report": "tsx skills/report-generate/src/cli.ts",
+    "agent:research": "tsx packages/agent/src/cli.ts",
+    "agent:smoke": "tsx packages/agent/src/sdk-smoke.ts",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter @devscope/db migrate"

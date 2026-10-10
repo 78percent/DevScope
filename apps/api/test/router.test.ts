@@ -81,3 +81,29 @@ describe("workflow routes", () => {
     await expect(appRouter.createCaller({ analyzer }).workflow.startDaily()).rejects.toThrow("not configured");
   });
 });
+
+describe("agent routes", () => {
+  it("starts and reads a research run", async () => {
+    const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
+    const runId = "00000000-0000-4000-8000-000000000001";
+    const research = {
+      start: vi.fn().mockReturnValue(runId),
+      get: vi.fn().mockReturnValue({
+        id: runId,
+        topic: "Agent frameworks",
+        status: "running" as const,
+        events: [],
+        created_at: "2026-01-01T00:00:00.000Z",
+      }),
+    };
+    const caller = appRouter.createCaller({ analyzer, research });
+    await expect(caller.agent.startResearch({ topic: "Agent frameworks" })).resolves.toEqual({ run_id: runId });
+    await expect(caller.agent.status({ run_id: runId })).resolves.toMatchObject({ status: "running" });
+    expect(research.start).toHaveBeenCalledWith("Agent frameworks");
+  });
+
+  it("reports a missing research agent clearly", async () => {
+    const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
+    await expect(appRouter.createCaller({ analyzer }).agent.startResearch({ topic: "Agent frameworks" })).rejects.toThrow("not configured");
+  });
+});

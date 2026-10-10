@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { createEmbeddingProvider, createRagAnswerGenerator, createRepositoryAnalyzer } from "@devscope/ai";
+import { createDefaultResearchAgent, ResearchJobManager } from "@devscope/agent";
 import { DefaultRagService, DefaultWorkflowService } from "@devscope/core";
 import { checkDatabaseConnection, createDatabase, PostgresRagStore, PostgresWorkflowStore } from "@devscope/db";
 import { DevScopeSourceCollector, GitHubSource, GitHubWorkflowSource, HackerNewsSource } from "@devscope/sources";
@@ -20,13 +21,15 @@ const workflow = new DefaultWorkflowService(
   collector,
   analyzer,
 );
+const projectRoot = fileURLToPath(new URL("../../..", import.meta.url));
+const research = new ResearchJobManager(createDefaultResearchAgent(projectRoot));
 await workflow.ensureWatchlist([
   { owner: "78percent", name: "LangGraph_Trip_Planner" },
   { owner: "78percent", name: "Bilibili-Progress-Tracker" },
   { owner: "KouriChat", name: "KouriChat" },
 ]);
 const stopScheduler = startWorkflowScheduler(workflow);
-const app = await buildApp({ analyzer, rag, workflow, databaseReady: () => checkDatabaseConnection() });
+const app = await buildApp({ analyzer, rag, workflow, research, databaseReady: () => checkDatabaseConnection() });
 app.addHook("onClose", async () => {
   stopScheduler();
   await database.client.end();

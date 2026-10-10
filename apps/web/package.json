@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@devscope/api": "workspace:*",
+    "@devscope/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
     "@trpc/client": "^11.7.1",
     "@radix-ui/react-slot": "^1.2.4",

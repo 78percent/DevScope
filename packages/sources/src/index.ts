@@ -4,3 +4,4 @@ export * from "./hacker-news-source.js";
 export * from "./collector.js";
 export * from "./workflow-source.js";
 export * from "./cli-source.js";
+export * from "./topic-source.js";
