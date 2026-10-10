@@ -1,7 +1,7 @@
 import { initTRPC } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 import type { RagService, WorkflowService } from "@devscope/core";
-import { HealthTrendInputSchema, HealthTrendResultSchema, IngestRepositoryInputSchema, IngestRepositoryResultSchema, QuickAssessmentInputSchema, RepositoryAnalysisInputSchema, RepositoryAnalysisSchema, ResearchRunInputSchema, ResearchRunSchema, ResearchStartInputSchema, ResearchStartResultSchema, SemanticSearchInputSchema, SemanticSearchResultSchema, WorkflowListInputSchema, WorkflowRunInputSchema, WorkflowRunSchema, WorkflowStartResultSchema } from "@devscope/shared";
+import { HealthTrendInputSchema, HealthTrendResultSchema, IngestRepositoryInputSchema, IngestRepositoryResultSchema, QuickAssessmentInputSchema, RepositoryAnalysisInputSchema, RepositoryAnalysisSchema, RepositoryTargetSchema, ResearchListInputSchema, ResearchReviewInputSchema, ResearchRunInputSchema, ResearchRunSchema, ResearchStartInputSchema, ResearchStartResultSchema, SemanticSearchInputSchema, SemanticSearchResultSchema, WorkflowListInputSchema, WorkflowRunInputSchema, WorkflowRunSchema, WorkflowStartResultSchema } from "@devscope/shared";
 import type { ApiContext } from "./context.js";
 
 const t = initTRPC.context<ApiContext>().create();
@@ -36,12 +36,18 @@ export const appRouter = t.router({
       .query(({ ctx, input }) => requireWorkflow(ctx).listRuns(input.limit)),
     healthTrends: t.procedure.input(HealthTrendInputSchema).output(HealthTrendResultSchema)
       .query(({ ctx, input }) => requireWorkflow(ctx).getHealthTrends(input)),
+    watchlist: t.procedure.output(RepositoryTargetSchema.array())
+      .query(({ ctx }) => requireWorkflow(ctx).getWatchlist()),
   }),
   agent: t.router({
     startResearch: t.procedure.input(ResearchStartInputSchema).output(ResearchStartResultSchema)
-      .mutation(({ ctx, input }) => ({ run_id: requireResearch(ctx).start(input.topic) })),
+      .mutation(async ({ ctx, input }) => ({ run_id: await requireResearch(ctx).start(input.topic) })),
     status: t.procedure.input(ResearchRunInputSchema).output(ResearchRunSchema.nullable())
       .query(({ ctx, input }) => requireResearch(ctx).get(input.run_id)),
+    reviewResearch: t.procedure.input(ResearchReviewInputSchema).output(ResearchRunSchema)
+      .mutation(({ ctx, input }) => requireResearch(ctx).review(input)),
+    listResearch: t.procedure.input(ResearchListInputSchema).output(ResearchRunSchema.array())
+      .query(({ ctx, input }) => requireResearch(ctx).list(input.limit)),
   }),
 });
 

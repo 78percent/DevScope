@@ -24,7 +24,8 @@ export class ResearchDataTools implements ResearchToolFactory {
 
   public create(onProgress: ResearchProgressHandler): { server: McpSdkServerConfigWithInstance; sources: ResearchSource[] } {
     const sources: ResearchSource[] = [];
-    const cache = new Map<string, unknown>();
+    const cache = new Map<string, Promise<unknown>>();
+    const analyzedRepositories = new Set<string>();
     const remember = (kind: ResearchSource["kind"], results: TopicSearchResult[]) => {
       for (const result of results) {
         if (sources.some((source) => source.url === result.url)) continue;
@@ -34,10 +35,11 @@ export class ResearchDataTools implements ResearchToolFactory {
       }
     };
     const cached = async <T>(key: string, operation: () => Promise<T>): Promise<T> => {
-      if (cache.has(key)) return cache.get(key) as T;
-      const result = await operation();
-      cache.set(key, result);
-      return result;
+      const existing = cache.get(key);
+      if (existing) return existing as Promise<T>;
+      const pending = operation();
+      cache.set(key, pending);
+      return pending;
     };
     const execute = async <T>(name: string, operation: () => Promise<T>) => {
       onProgress({ type: "tool_start", message: `开始执行 ${name}` });
@@ -62,7 +64,7 @@ export class ResearchDataTools implements ResearchToolFactory {
           topic: z.string().min(2).describe("Technology topic or search query"),
           limit: z.number().int().min(1).max(5).default(5),
         }, ({ topic, limit }) => execute("GitHub 仓库搜索", async () => {
-          const results = await cached(`github:${topic}:${limit}`, () => this.options.githubSearch.search(topic, limit));
+          const results = await cached("github-search", () => this.options.githubSearch.search(topic, limit));
           remember("github", results);
           return results;
         }), { annotations: { readOnlyHint: true } }),
@@ -70,7 +72,7 @@ export class ResearchDataTools implements ResearchToolFactory {
           topic: z.string().min(2),
           limit: z.number().int().min(1).max(5).default(5),
         }, ({ topic, limit }) => execute("Hacker News 搜索", async () => {
-          const results = await cached(`hn:${topic}:${limit}`, () => this.options.hackerNewsSearch.search(topic, limit));
+          const results = await cached("hacker-news-search", () => this.options.hackerNewsSearch.search(topic, limit));
           remember("hacker_news", results);
           return results;
         }), { annotations: { readOnlyHint: true } }),
@@ -78,13 +80,16 @@ export class ResearchDataTools implements ResearchToolFactory {
           topic: z.string().min(2),
           limit: z.number().int().min(1).max(5).default(5),
         }, ({ topic, limit }) => execute("论文搜索", async () => {
-          const results = await cached(`paper:${topic}:${limit}`, () => this.options.paperSearch.search(topic, limit));
+          const results = await cached("paper-search", () => this.options.paperSearch.search(topic, limit));
           remember("paper", results);
           return results;
         }), { annotations: { readOnlyHint: true } }),
         tool("analyze_repository", "Fetch and analyze one GitHub repository using the existing DevScope repository analysis capability.", {
           repository: z.string().regex(/^[^/\s]+\/[^/\s]+$/).describe("Repository in owner/name format"),
         }, ({ repository }) => execute("仓库分析", async () => cached(`repository:${repository.toLowerCase()}`, async () => {
+          const normalized = repository.toLowerCase();
+          if (!analyzedRepositories.has(normalized) && analyzedRepositories.size >= 5) throw new Error("一次研究最多分析 5 个仓库");
+          analyzedRepositories.add(normalized);
           const [owner = "", name = ""] = repository.split("/");
           const fetched = await this.options.repositorySource.fetch({ owner, name }, { include_issues: true, include_commits: true });
           const issueResolutionRate = fetched.issues.length === 0 ? 0 : fetched.issues.filter((issue) => issue.state === "closed").length / fetched.issues.length;

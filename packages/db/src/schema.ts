@@ -1,5 +1,5 @@
-import { index, boolean, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, vector } from "drizzle-orm/pg-core";
-import type { RagSourceType, RepositoryAnalysis, RepositorySnapshot, WorkflowStatus, WorkflowStepStatus, WorkflowType } from "@devscope/shared";
+import { index, boolean, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, uuid, vector } from "drizzle-orm/pg-core";
+import type { RagSourceType, RepositoryAnalysis, RepositorySnapshot, ResearchCheckpoint, ResearchEvent, ResearchReport, ResearchStatus, WorkflowStatus, WorkflowStepStatus, WorkflowType } from "@devscope/shared";
 
 export const repositories = pgTable("repositories", {
   id: serial("id").primaryKey(),
@@ -69,3 +69,19 @@ export const workflowSteps = pgTable("workflow_steps", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (table) => [uniqueIndex("workflow_steps_run_key_unique").on(table.runId, table.key)]);
+
+export const researchReports = pgTable("research_reports", {
+  id: uuid("id").primaryKey(),
+  topic: text("topic").notNull(),
+  status: text("status").$type<ResearchStatus>().notNull().default("pending"),
+  checkpoint: jsonb("checkpoint").$type<ResearchCheckpoint>(),
+  guidance: text("guidance"),
+  report: jsonb("report").$type<ResearchReport>(),
+  events: jsonb("events").$type<ResearchEvent[]>().notNull().default([]),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("research_reports_created_idx").on(table.createdAt)]);

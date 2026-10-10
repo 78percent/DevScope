@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { createEmbeddingProvider, createRagAnswerGenerator, createRepositoryAnalyzer } from "@devscope/ai";
 import { createDefaultResearchAgent, ResearchJobManager } from "@devscope/agent";
 import { DefaultRagService, DefaultWorkflowService } from "@devscope/core";
-import { checkDatabaseConnection, createDatabase, PostgresRagStore, PostgresWorkflowStore } from "@devscope/db";
+import { checkDatabaseConnection, createDatabase, PostgresRagStore, PostgresResearchStore, PostgresWorkflowStore } from "@devscope/db";
 import { DevScopeSourceCollector, GitHubSource, GitHubWorkflowSource, HackerNewsSource } from "@devscope/sources";
 import { buildApp } from "./app.js";
 import { startWorkflowScheduler } from "./scheduler.js";
@@ -22,7 +22,7 @@ const workflow = new DefaultWorkflowService(
   analyzer,
 );
 const projectRoot = fileURLToPath(new URL("../../..", import.meta.url));
-const research = new ResearchJobManager(createDefaultResearchAgent(projectRoot));
+const research = new ResearchJobManager(createDefaultResearchAgent(projectRoot), new PostgresResearchStore(database.db));
 await workflow.ensureWatchlist([
   { owner: "78percent", name: "LangGraph_Trip_Planner" },
   { owner: "78percent", name: "Bilibili-Progress-Tracker" },

@@ -7,5 +7,5 @@ export interface ApiContext {
   analyzer: RepositoryAnalyzer;
   rag?: RagService;
   workflow?: WorkflowService;
-  research?: Pick<ResearchJobManager, "start" | "get">;
+  research?: Pick<ResearchJobManager, "start" | "get" | "list" | "review">;
 }

@@ -64,6 +64,7 @@ describe("workflow routes", () => {
       getRun: vi.fn().mockResolvedValue(null),
       listRuns: vi.fn().mockResolvedValue([]),
       ensureWatchlist: vi.fn().mockResolvedValue(undefined),
+      getWatchlist: vi.fn().mockResolvedValue([{ owner: "acme", name: "demo" }]),
       getHealthTrends: vi.fn().mockResolvedValue({ points: [] }),
     };
     const caller = appRouter.createCaller({ analyzer, workflow });
@@ -73,6 +74,7 @@ describe("workflow routes", () => {
     await expect(caller.workflow.status({ run_id: 42 })).resolves.toBeNull();
     await expect(caller.workflow.list({})).resolves.toEqual([]);
     await expect(caller.workflow.healthTrends({})).resolves.toEqual({ points: [] });
+    await expect(caller.workflow.watchlist()).resolves.toEqual([{ owner: "acme", name: "demo" }]);
     expect(workflow.startQuickAssessment).toHaveBeenCalledWith("acme/demo");
   });
 
@@ -86,20 +88,40 @@ describe("agent routes", () => {
   it("starts and reads a research run", async () => {
     const analyzer: RepositoryAnalyzer = { analyze: vi.fn().mockResolvedValue(output) };
     const runId = "00000000-0000-4000-8000-000000000001";
+    const reviewedRun = {
+      id: runId,
+      topic: "Agent frameworks",
+      status: "generating" as const,
+      events: [],
+      checkpoint: {
+        plan: "Collect repository and community evidence, then compare candidates.",
+        summary: "Evidence-backed intermediate research. ".repeat(5),
+        agents: ["orchestrator", "fetch", "community", "competitor"] as const,
+        sources: [{ kind: "github" as const, title: "source", url: "https://github.com/acme/demo", retrieved_at: "2026-01-01T00:00:00.000Z" }],
+        collected_at: "2026-01-01T00:00:00.000Z",
+      },
+      created_at: "2026-01-01T00:00:00.000Z",
+      reviewed_at: "2026-01-01T00:01:00.000Z",
+    };
     const research = {
-      start: vi.fn().mockReturnValue(runId),
-      get: vi.fn().mockReturnValue({
+      start: vi.fn().mockResolvedValue(runId),
+      get: vi.fn().mockResolvedValue({
         id: runId,
         topic: "Agent frameworks",
-        status: "running" as const,
+        status: "collecting" as const,
         events: [],
         created_at: "2026-01-01T00:00:00.000Z",
       }),
+      list: vi.fn().mockResolvedValue([]),
+      review: vi.fn().mockResolvedValue(reviewedRun),
     };
     const caller = appRouter.createCaller({ analyzer, research });
     await expect(caller.agent.startResearch({ topic: "Agent frameworks" })).resolves.toEqual({ run_id: runId });
-    await expect(caller.agent.status({ run_id: runId })).resolves.toMatchObject({ status: "running" });
+    await expect(caller.agent.status({ run_id: runId })).resolves.toMatchObject({ status: "collecting" });
+    await expect(caller.agent.listResearch({})).resolves.toEqual([]);
+    await expect(caller.agent.reviewResearch({ run_id: runId, action: "continue" })).resolves.toMatchObject({ status: "generating" });
     expect(research.start).toHaveBeenCalledWith("Agent frameworks");
+    expect(research.review).toHaveBeenCalledWith({ run_id: runId, action: "continue" });
   });
 
   it("reports a missing research agent clearly", async () => {

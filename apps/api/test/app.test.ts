@@ -41,7 +41,9 @@ describe("Fastify application", () => {
     const event = { id: 0, run_id: runId, type: "completed" as const, message: "done", timestamp: "2026-01-01T00:00:00.000Z" };
     const research = {
       start: vi.fn(),
-      get: vi.fn().mockReturnValue({ id: runId, topic: "Agent frameworks", status: "completed", events: [event], created_at: event.timestamp, completed_at: event.timestamp }),
+      get: vi.fn().mockResolvedValue({ id: runId, topic: "Agent frameworks", status: "completed", events: [event], created_at: event.timestamp, completed_at: event.timestamp }),
+      list: vi.fn(),
+      review: vi.fn(),
       subscribe: vi.fn(),
     };
     const app = await buildApp({ analyzer: new MockRepositoryAnalyzer(), research });
@@ -55,6 +57,24 @@ describe("Fastify application", () => {
     expect(research.subscribe).not.toHaveBeenCalled();
   });
 
+  it("can resume an SSE stream after the last event already shown", async () => {
+    const runId = "00000000-0000-4000-8000-000000000004";
+    const first = { id: 0, run_id: runId, type: "phase" as const, message: "old", timestamp: "2026-01-01T00:00:00.000Z" };
+    const last = { ...first, id: 1, type: "completed" as const, message: "new" };
+    const research = {
+      start: vi.fn(),
+      get: vi.fn().mockResolvedValue({ id: runId, topic: "Agent frameworks", status: "completed", events: [first, last], created_at: first.timestamp, completed_at: first.timestamp }),
+      list: vi.fn(),
+      review: vi.fn(),
+      subscribe: vi.fn(),
+    };
+    const app = await buildApp({ analyzer: new MockRepositoryAnalyzer(), research });
+    apps.push(app);
+    const response = await app.inject({ method: "GET", url: `/agent/research/${runId}/events?after=0` });
+    expect(response.body).not.toContain('"message":"old"');
+    expect(response.body).toContain('"message":"new"');
+  });
+
   it("streams live research events and closes on a terminal event", async () => {
     const runId = "00000000-0000-4000-8000-000000000002";
     const started = { id: 0, run_id: runId, type: "phase" as const, message: "started", timestamp: "2026-01-01T00:00:00.000Z" };
@@ -62,7 +82,9 @@ describe("Fastify application", () => {
     const unsubscribe = vi.fn();
     const research = {
       start: vi.fn(),
-      get: vi.fn().mockReturnValue({ id: runId, topic: "Agent frameworks", status: "running", events: [started], created_at: started.timestamp }),
+      get: vi.fn().mockResolvedValue({ id: runId, topic: "Agent frameworks", status: "collecting", events: [started], created_at: started.timestamp }),
+      list: vi.fn(),
+      review: vi.fn(),
       subscribe: vi.fn((_id: string, listener: (event: typeof completed) => void) => {
         queueMicrotask(() => listener(completed));
         return unsubscribe;
@@ -81,7 +103,9 @@ describe("Fastify application", () => {
     const event = { id: 0, run_id: runId, type: "error" as const, message: "research failed", timestamp: "2026-01-01T00:00:00.000Z" };
     const research = {
       start: vi.fn(),
-      get: vi.fn().mockReturnValue({ id: runId, topic: "Agent frameworks", status: "failed", events: [event], error: event.message, created_at: event.timestamp, completed_at: event.timestamp }),
+      get: vi.fn().mockResolvedValue({ id: runId, topic: "Agent frameworks", status: "failed", events: [event], error: event.message, created_at: event.timestamp, completed_at: event.timestamp }),
+      list: vi.fn(),
+      review: vi.fn(),
       subscribe: vi.fn(),
     };
     const app = await buildApp({ analyzer: new MockRepositoryAnalyzer(), research });

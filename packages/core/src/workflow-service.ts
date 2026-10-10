@@ -45,6 +45,7 @@ export interface WorkflowService {
   getRun(runId: number): Promise<WorkflowRun | null>;
   listRuns(limit: number): Promise<WorkflowRun[]>;
   ensureWatchlist(targets: RepositoryTarget[]): Promise<void>;
+  getWatchlist(): Promise<RepositoryTarget[]>;
   getHealthTrends(input: HealthTrendInput): Promise<HealthTrendResult>;
 }
 
@@ -88,6 +89,10 @@ export class DefaultWorkflowService implements WorkflowService {
 
   public ensureWatchlist(targets: RepositoryTarget[]): Promise<void> {
     return this.store.ensureWatchlist(targets);
+  }
+
+  public getWatchlist(): Promise<RepositoryTarget[]> {
+    return this.store.getWatchlist();
   }
 
   public async getHealthTrends(input: HealthTrendInput): Promise<HealthTrendResult> {

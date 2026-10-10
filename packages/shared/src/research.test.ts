@@ -1,22 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { ResearchEventSchema, ResearchReportSchema, ResearchStartInputSchema } from "./research.js";
+import { ResearchReviewInputSchema, ResearchRunSchema } from "./research.js";
 
-describe("research contracts", () => {
-  it("normalizes a valid research topic", () => {
-    expect(ResearchStartInputSchema.parse({ topic: "  TypeScript Agent frameworks  " })).toEqual({
-      topic: "TypeScript Agent frameworks",
-    });
+describe("research schemas", () => {
+  it("requires guidance when the user adjusts the research direction", () => {
+    const runId = "00000000-0000-4000-8000-000000000001";
+    expect(() => ResearchReviewInputSchema.parse({ run_id: runId, action: "adjust" })).toThrow();
+    expect(ResearchReviewInputSchema.parse({ run_id: runId, action: "adjust", guidance: "关注部署成本" })).toMatchObject({ action: "adjust" });
   });
 
-  it("rejects invalid events and reports without traceable sources", () => {
-    expect(() => ResearchEventSchema.parse({ id: -1 })).toThrow();
-    expect(() => ResearchReportSchema.parse({
-      run_id: crypto.randomUUID(),
+  it("accepts a persisted human-review checkpoint", () => {
+    const timestamp = "2026-01-01T00:00:00.000Z";
+    expect(ResearchRunSchema.parse({
+      id: "00000000-0000-4000-8000-000000000001",
       topic: "Agent frameworks",
-      markdown: "x".repeat(120),
-      sources: [],
-      report_path: "reports/test.md",
-      generated_at: new Date().toISOString(),
-    })).toThrow();
+      status: "awaiting_review",
+      events: [],
+      checkpoint: {
+        plan: "Collect two evidence streams and compare the strongest candidates.",
+        summary: "Evidence-backed intermediate research. ".repeat(5),
+        agents: ["orchestrator", "fetch", "community", "competitor"],
+        sources: [{ kind: "github", title: "source", url: "https://github.com/acme/demo", retrieved_at: timestamp }],
+        collected_at: timestamp,
+      },
+      created_at: timestamp,
+    }).status).toBe("awaiting_review");
   });
 });

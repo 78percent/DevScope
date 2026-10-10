@@ -10,7 +10,7 @@ export interface BuildAppOptions {
   analyzer: RepositoryAnalyzer;
   rag?: RagService;
   workflow?: WorkflowService;
-  research?: Pick<ResearchJobManager, "start" | "get" | "subscribe">;
+  research?: Pick<ResearchJobManager, "start" | "get" | "list" | "review" | "subscribe">;
   databaseReady?: () => Promise<boolean>;
 }
 
@@ -34,9 +34,9 @@ export async function buildApp(options: BuildAppOptions) {
     status: "ok",
     database: options.databaseReady ? await options.databaseReady() : "not-checked",
   }));
-  app.get<{ Params: { runId: string } }>("/agent/research/:runId/events", async (request, reply) => {
+  app.get<{ Params: { runId: string }; Querystring: { after?: string } }>("/agent/research/:runId/events", async (request, reply) => {
     const research = options.research;
-    const run = research?.get(request.params.runId);
+    const run = research ? await research.get(request.params.runId) : null;
     if (!research || !run) return reply.code(404).send({ error: "Research run not found" });
 
     reply.raw.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -52,14 +52,15 @@ export async function buildApp(options: BuildAppOptions) {
       const eventName = event.type === "error" ? "research_error" : event.type;
       reply.raw.write(`id: ${event.id}\nevent: ${eventName}\ndata: ${JSON.stringify(event)}\n\n`);
     };
-    run.events.forEach(send);
-    if (run.status === "completed" || run.status === "failed") {
+    const after = Number.parseInt(request.query.after ?? "-1", 10);
+    run.events.filter((event) => event.id > (Number.isFinite(after) ? after : -1)).forEach(send);
+    if (["awaiting_review", "completed", "failed", "cancelled"].includes(run.status)) {
       reply.raw.end();
       return;
     }
     const unsubscribe = research.subscribe(run.id, (event) => {
       send(event);
-      if (event.type === "completed" || event.type === "error") reply.raw.end();
+      if (["awaiting_review", "completed", "cancelled", "error"].includes(event.type)) reply.raw.end();
     });
     const keepAlive = setInterval(() => reply.raw.write(": keep-alive\n\n"), 15_000);
     request.raw.on("close", () => {

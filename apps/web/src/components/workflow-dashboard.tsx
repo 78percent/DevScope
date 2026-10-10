@@ -3,7 +3,7 @@
 import type { AppRouter } from "@devscope/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardTitle } from "./ui/card";
 
@@ -13,13 +13,17 @@ const labels = {
   weekly_report: "每周汇总报告",
 } as const;
 
-export function WorkflowDashboard() {
+export function WorkflowDashboard({ initialRepository }: { initialRepository?: string }) {
   const queryClient = useQueryClient();
   const client = useMemo(() => createTRPCClient<AppRouter>({
     links: [httpBatchLink({ url: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/trpc` })],
   }), []);
-  const [repository, setRepository] = useState("78percent/LangGraph_Trip_Planner");
+  const [repository, setRepository] = useState(initialRepository ?? "78percent/LangGraph_Trip_Planner");
   const [activeRunId, setActiveRunId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (initialRepository?.trim()) setRepository(initialRepository);
+  }, [initialRepository]);
 
   const history = useQuery({
     queryKey: ["workflow-runs"],
